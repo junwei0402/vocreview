@@ -59,7 +59,7 @@
 
         <div id="challenger-name-box" class="name-input-box hidden">
             <label style="font-weight:bold; color:#b7950b;">挑戰者姓名 / 座號（全選模式必填）：</label>
-            <input type="text" id="player-name" placeholder="請輸入名字，測驗結束將自動登錄排名">
+            <input type="text" id="player-name" placeholder="請輸入暱稱，測驗結束將自動登錄排名">
         </div>
 
         <div class="section-title">2. 選擇測驗題型（共 50 題）</div>
@@ -111,20 +111,18 @@
         </div>
         <button class="btn btn-secondary" onclick="location.reload()">返回重新設定</button>
     </div>
-    <script>
+        <script>
         // 1. 【請填入你的 Google Apps Script 網址】
         const GAS_URL = 'https://script.google.com/macros/s/AKfycbyWrel2f0Ajna0iLPiBEoSZY_QOFwMUt905TsHcic0DuDPd5O536AifGeea3pmkRAb7/exec'; 
         const QUIZ_COUNT = 50; 
 
-        // 2. 【請在下方引號內替換成你準備的 5 張圖片網址】
+        // 2. 【圖片檔名設定】
         const SCORE_IMAGES = {
-            under60: '1.jpg',
-            s60to70: '2.jpg',
-            s70to80: '3.jpg',
-            s80to90: '4.jpg',
-            s90to100: '5.jpg'
-        };
-
+            under60: '1.gif',
+            s60to70: '2.gif',
+            s70to80: '3.gif',
+            s80to90: '4.gif',
+            s90to100: '5.gif'
         };
 
         let allVocab = [], quizList = [], currentIndex = 0, correctCount = 0;
@@ -193,7 +191,6 @@
             document.getElementById('setup-screen').classList.add('hidden');
             document.getElementById('quiz-screen').classList.remove('hidden');
 
-            // 計時器：畫面顯示整數秒（不跳小數點），背景保留精確毫秒用於排行榜排序
             startTime = Date.now();
             timerInterval = setInterval(() => {
                 const sec = Math.floor((Date.now() - startTime) / 1000);
@@ -247,7 +244,6 @@
             document.getElementById('final-score').innerText = finalScore;
             document.getElementById('final-time').innerText = displaySec;
 
-            // 依分數級距顯示對應圖片
             const imgEl = document.getElementById('grade-image');
             if (finalScore < 60) imgEl.src = SCORE_IMAGES.under60;
             else if (finalScore < 70) imgEl.src = SCORE_IMAGES.s60to70;
@@ -255,9 +251,11 @@
             else if (finalScore < 90) imgEl.src = SCORE_IMAGES.s80to90;
             else imgEl.src = SCORE_IMAGES.s90to100;
 
-            // 全選模式自動上傳成績並刷新排行榜
             if (isAllSelected) {
-                document.getElementById('leaderboard-section').classList.remove('hidden');
+                const lbSection = document.getElementById('leaderboard-section');
+                lbSection.classList.remove('hidden');
+                const modeTitle = (quizMode === 'zh2en') ? '🏆 【看中選英】全選挑戰排行榜' : '🏆 【看英選中】全選挑戰排行榜';
+                lbSection.querySelector('h2').innerText = modeTitle;
                 await autoUploadAndFetch(finalScore, exactElapsedTime);
             }
         }
@@ -267,9 +265,9 @@
             try {
                 await fetch(GAS_URL, {
                     method: 'POST',
-                    body: JSON.stringify({ name: playerName, score: finalScore, time: timeUsed })
+                    body: JSON.stringify({ name: playerName, score: finalScore, time: timeUsed, mode: quizMode })
                 });
-                statusEl.innerText = '✅ 成績已自動登錄至雲端排行榜！';
+                statusEl.innerText = '✅ 成績已自動登錄至專屬題型排行榜！';
             } catch (err) {
                 statusEl.innerText = '⚠️ 成績自動上傳失敗，但仍可檢視目前排名';
                 statusEl.style.color = '#e74c3c';
@@ -277,7 +275,7 @@
 
             const tbody = document.getElementById('leaderboard-body');
             try {
-                const res = await fetch(GAS_URL + '?action=getLeaderboard');
+                const res = await fetch(`${GAS_URL}?action=getLeaderboard&mode=${quizMode}`);
                 const records = await res.json();
                 tbody.innerHTML = records.length === 0 ? '<tr><td colspan="4">目前尚無紀錄</td></tr>' : '';
                 records.forEach((rec, i) => {
@@ -290,3 +288,4 @@
     </script>
 </body>
 </html>
+
