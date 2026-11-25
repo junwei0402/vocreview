@@ -29,7 +29,7 @@
 
     <div id="setup-screen" class="card">
         <h1>單字範圍選擇</h1>
-        <p style="text-align:center; color:#666;">請勾選要測驗的冊別（全選五冊可參與雲端排行榜）</p>
+        <p style="text-align:center; color:#666;">請勾選要測驗的冊別（全選可參與雲端排行榜）</p>
         
         <div class="checkbox-group">
             <label><input type="checkbox" class="vol-cb" value="1"> 第一冊</label>
@@ -70,7 +70,7 @@
             <p style="text-align:center; font-size:14px; color:#666;">（分數高者優先，同分者以作答時間短為優先）</p>
             
             <div id="save-record-box">
-                <input type="text" id="player-name" placeholder="請輸入你的名字或座號">
+                <input type="text" id="player-name" placeholder="請輸入你的暱稱😁">
                 <button id="submit-score-btn" class="btn" onclick="saveScore()">上傳成績到排行榜</button>
             </div>
 
@@ -95,7 +95,7 @@
     <script>
         // ================= 設定區 =================
         // 請貼上你部署 Google Apps Script 取得的網頁應用程式網址（結尾為 /exec）
-        const GAS_URL = '你的APPS_SCRIPT網址'; 
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbyWrel2f0Ajna0iLPiBEoSZY_QOFwMUt905TsHcic0DuDPd5O536AifGeea3pmkRAb7/exec'; 
         // 每次測驗題數
         const QUIZ_COUNT = 10; 
         // ==========================================
