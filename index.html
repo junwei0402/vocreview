@@ -14,9 +14,8 @@
         .btn:hover { background: #2980b9; }
         .btn:disabled { background: #bdc3c7; cursor: not-allowed; }
         .btn-secondary { background: #95a5a6; }
-        .btn-secondary:hover { background: #7f8c8d; }
         .hidden { display: none; }
-        .option-btn { display: block; width: 100%; padding: 12px; margin: 10px 0; font-size: 16px; text-align: left; background: #fff; border: 2px solid #dcdde1; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+        .option-btn { display: block; width: 100%; padding: 12px; margin: 10px 0; font-size: 16px; text-align: left; background: #fff; border: 2px solid #dcdde1; border-radius: 8px; cursor: pointer; }
         .option-btn:hover { background: #f1f2f6; border-color: #3498db; }
         .status-bar { display: flex; justify-content: space-between; font-weight: bold; color: #7f8c8d; margin-bottom: 15px; }
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
@@ -30,7 +29,6 @@
     <div id="setup-screen" class="card">
         <h1>單字範圍選擇</h1>
         <p style="text-align:center; color:#666;">請勾選要測驗的冊別（全選可參與雲端排行榜）</p>
-        
         <div class="checkbox-group">
             <label><input type="checkbox" class="vol-cb" value="1"> 第一冊</label>
             <label><input type="checkbox" class="vol-cb" value="2"> 第二冊</label>
@@ -43,9 +41,8 @@
                 <input type="checkbox" id="select-all" onchange="toggleSelectAll(this)"> 全選（開啟排行榜挑戰模式）
             </label>
         </div>
-
         <button id="start-btn" class="btn" onclick="startQuiz()" disabled>載入題庫中...</button>
-        <p id="loading-msg" style="text-align:center; color:#e74c3c;"></p>
+        <p id="loading-msg" style="text-align:center; color:#e74c3c; font-weight:bold;"></p>
     </div>
 
     <div id="quiz-screen" class="card hidden">
@@ -63,71 +60,58 @@
             你的得分：<strong id="final-score" style="color:#e74c3c; font-size: 28px;">0</strong> 分<br>
             作答時間：<strong id="final-time">0.0</strong> 秒
         </p>
-
         <div id="leaderboard-section" class="hidden">
             <hr>
             <h2>🏆 全選挑戰雲端排行榜</h2>
             <p style="text-align:center; font-size:14px; color:#666;">（分數高者優先，同分者以作答時間短為優先）</p>
-            
             <div id="save-record-box">
-                <input type="text" id="player-name" placeholder="請輸入你的暱稱😁">
+                <input type="text" id="player-name" placeholder="請輸入你的名字或座號">
                 <button id="submit-score-btn" class="btn" onclick="saveScore()">上傳成績到排行榜</button>
             </div>
-
             <table>
                 <thead>
-                    <tr>
-                        <th>名次</th>
-                        <th>姓名</th>
-                        <th>分數</th>
-                        <th>作答時間</th>
-                    </tr>
+                    <tr><th>名次</th><th>姓名</th><th>分數</th><th>作答時間</th></tr>
                 </thead>
                 <tbody id="leaderboard-body">
                     <tr><td colspan="4">正在載入排行榜...</td></tr>
                 </tbody>
             </table>
         </div>
-
         <button class="btn btn-secondary" onclick="location.reload()">重新選擇範圍</button>
     </div>
-
-    <script>
-        // ================= 設定區 =================
-        // 請貼上你部署 Google Apps Script 取得的網頁應用程式網址（結尾為 /exec）
+        <script>
+        // 【請只修改下面這一行引號內的網址】
         const GAS_URL = 'https://script.google.com/macros/s/AKfycbyWrel2f0Ajna0iLPiBEoSZY_QOFwMUt905TsHcic0DuDPd5O536AifGeea3pmkRAb7/exec'; 
-        // 每次測驗題數
         const QUIZ_COUNT = 10; 
-        // ==========================================
 
-        let allVocab = [];
-        let quizList = [];
-        let currentIndex = 0;
-        let score = 0;
-        let startTime = 0;
-        let timerInterval = null;
-        let elapsedTime = 0;
-        let isAllSelected = false;
+        let allVocab = [], quizList = [], currentIndex = 0, score = 0;
+        let startTime = 0, timerInterval = null, elapsedTime = 0, isAllSelected = false;
 
-        // 網頁載入時從 GAS 讀取單字庫
         window.onload = async function() {
             const msg = document.getElementById('loading-msg');
             const startBtn = document.getElementById('start-btn');
 
-            if (GAS_URL === 'https://script.google.com/macros/s/AKfycbyWrel2f0Ajna0iLPiBEoSZY_QOFwMUt905TsHcic0DuDPd5O536AifGeea3pmkRAb7/exec') {
-                msg.innerText = '⚠️ 請先在程式碼中填入你的 Google Apps Script 網址！';
+            if (!GAS_URL || GAS_URL === '你的APPS_SCRIPT網址') {
+                msg.innerText = '⚠️ 尚未設定 GAS_URL！請將 Google Apps Script 網址填入程式碼中。';
                 return;
             }
 
             try {
-                const res = await fetch(`${GAS_URL}?action=getVocab`);
+                const res = await fetch(GAS_URL + '?action=getVocab');
+                if (!res.ok) throw new Error('HTTP 狀態碼錯誤: ' + res.status);
                 allVocab = await res.json();
+                
+                if (allVocab.length === 0) {
+                    msg.innerText = '⚠️ 連線成功，但「單字庫」分頁裡面沒有抓到資料！';
+                    return;
+                }
+
                 msg.innerText = `✅ 雲端單字庫載入完成（共 ${allVocab.length} 個單字）`;
                 msg.style.color = '#27ae60';
                 startBtn.disabled = false;
                 startBtn.innerText = '開始測驗';
             } catch (err) {
-                msg.innerText = '❌ 讀取失敗，請確認 Apps Script 權限是否設為「所有人」。';
+                msg.innerText = '❌ 讀取失敗：' + err.message;
             }
         };
 
@@ -144,24 +128,16 @@
 
         function startQuiz() {
             const selectedVols = Array.from(document.querySelectorAll('.vol-cb:checked')).map(cb => cb.value);
-            if (selectedVols.length === 0) {
-                alert('請至少勾選一冊！');
-                return;
-            }
+            if (selectedVols.length === 0) return alert('請至少勾選一冊！');
 
             isAllSelected = (selectedVols.length === 5);
-
             const filtered = allVocab.filter(item => selectedVols.includes(item.vol));
-            if (filtered.length < 4) {
-                alert('所選範圍的單字數量不足 4 個，無法產生四選一題目！');
-                return;
-            }
+            if (filtered.length < 4) return alert('所選範圍的單字數量不足 4 個！');
 
-            const shuffled = [...filtered].sort(() => 0.5 - Math.random());
-            quizList = shuffled.slice(0, Math.min(QUIZ_COUNT, shuffled.length));
-
+            quizList = [...filtered].sort(() => 0.5 - Math.random()).slice(0, Math.min(QUIZ_COUNT, filtered.length));
             currentIndex = 0;
             score = 0;
+
             document.getElementById('setup-screen').classList.add('hidden');
             document.getElementById('quiz-screen').classList.remove('hidden');
 
@@ -179,12 +155,7 @@
             document.getElementById('progress-text').innerText = `第 ${currentIndex + 1} / ${quizList.length} 題`;
             document.getElementById('question-word').innerText = currentWord.en;
 
-            let wrongOptions = allVocab
-                .filter(item => item.zh !== currentWord.zh)
-                .sort(() => 0.5 - Math.random())
-                .slice(0, 3)
-                .map(item => item.zh);
-
+            let wrongOptions = allVocab.filter(item => item.zh !== currentWord.zh).sort(() => 0.5 - Math.random()).slice(0, 3).map(item => item.zh);
             let options = [...wrongOptions, currentWord.zh].sort(() => 0.5 - Math.random());
 
             const container = document.getElementById('options-container');
@@ -193,21 +164,13 @@
                 const btn = document.createElement('button');
                 btn.className = 'option-btn';
                 btn.innerText = opt;
-                btn.onclick = () => checkAnswer(opt === currentWord.zh);
+                btn.onclick = () => {
+                    if (opt === currentWord.zh) score += Math.round(100 / quizList.length);
+                    currentIndex++;
+                    currentIndex < quizList.length ? showQuestion() : endQuiz();
+                };
                 container.appendChild(btn);
             });
-        }
-
-        function checkAnswer(isCorrect) {
-            if (isCorrect) {
-                score += Math.round(100 / quizList.length);
-            }
-            currentIndex++;
-            if (currentIndex < quizList.length) {
-                showQuestion();
-            } else {
-                endQuiz();
-            }
         }
 
         function endQuiz() {
@@ -225,57 +188,43 @@
             }
         }
 
-        // 上傳成績到 Google 試算表
         async function saveScore() {
             const name = document.getElementById('player-name').value.trim();
-            if (!name) {
-                alert('請輸入名字！');
-                return;
-            }
+            if (!name) return alert('請輸入名字！');
 
             const btn = document.getElementById('submit-score-btn');
-btn.disabled = true;
-btn.innerText = '成績上傳中...';
-try {
-await fetch(GAS_URL, {
-method: 'POST',
-body: JSON.stringify({
-name: name,
-score: score,
-time: parseFloat(elapsedTime)
-})
-});
-document.getElementById('save-record-box').classList.add('hidden');
-fetchLeaderboard();
-} catch (err) {
-alert('上傳失敗，請稍後再試！');
-btn.disabled = false;
-btn.innerText = '上傳成績到排行榜';
-}
-}
-// 從 Google 試算表抓取最新排行榜
-async function fetchLeaderboard() {
-const tbody = document.getElementById('leaderboard-body');
-tbody.innerHTML = '正在更新最新排名...';
-try {
-const res = await fetch(${GAS_URL}?action=getLeaderboard);
-const records = await res.json();
-tbody.innerHTML = '';
-if (records.length === 0) {
-tbody.innerHTML = '目前尚無紀錄，快來搶下第一名！';
-return;
-}
-records.forEach((rec, index) => {
-const tr = document.createElement('tr');
-tr.innerHTML = `
-${index + 1}
-${rec.name}
-${rec.score}
-${rec.time.toFixed(1)} 秒
-`;
-tbody.appendChild(tr);
-});
-} catch (err) {
-tbody.innerHTML = '排行榜載入失敗';
-}
-}
+            btn.disabled = true;
+            btn.innerText = '成績上傳中...';
+
+            try {
+                await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ name: name, score: score, time: parseFloat(elapsedTime) })
+                });
+                document.getElementById('save-record-box').classList.add('hidden');
+                fetchLeaderboard();
+            } catch (err) {
+                alert('上傳失敗，請稍後再試！');
+                btn.disabled = false;
+                btn.innerText = '上傳成績到排行榜';
+            }
+        }
+
+        async function fetchLeaderboard() {
+            const tbody = document.getElementById('leaderboard-body');
+            tbody.innerHTML = '<tr><td colspan="4">正在更新最新排名...</td></tr>';
+            try {
+                const res = await fetch(GAS_URL + '?action=getLeaderboard');
+                const records = await res.json();
+                tbody.innerHTML = records.length === 0 ? '<tr><td colspan="4">目前尚無紀錄，快來搶下第一名！</td></tr>' : '';
+                records.forEach((rec, index) => {
+                    tbody.innerHTML += `<tr><td>${index + 1}</td><td>${rec.name}</td><td><strong>${rec.score}</strong></td><td>${rec.time.toFixed(1)} 秒</td></tr>`;
+                });
+            } catch (err) {
+                tbody.innerHTML = '<tr><td colspan="4">排行榜載入失敗</td></tr>';
+            }
+        }
+    </script>
+</body>
+</html>
+
